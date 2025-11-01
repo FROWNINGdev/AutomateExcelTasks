@@ -131,7 +131,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ### 👨‍💻 Author
 
-Developed by AI Assistant with Claude Sonnet 4.5
+FROWNINGdev
 
 ### 📄 License
 
@@ -246,7 +246,7 @@ docker-compose up -d
 
 ### 👨‍💻 Автор
 
-Разработано AI Assistant с использованием Claude Sonnet 4.5
+FROWNINGdev
 
 ### 📄 Лицензия
 
