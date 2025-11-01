@@ -254,5 +254,6 @@ MIT License - см. [LICENSE](LICENSE)
 
 ---
 
+
 **Version:** 4.0  
-**Status:** Production Ready ✅
+**Status:** Production Ready ✅ 
