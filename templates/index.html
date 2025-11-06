@@ -8,6 +8,19 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <!-- Видео превью -->
+    <div id="videoPreview" class="video-preview">
+        <video id="previewVideo" class="preview-video" autoplay muted loop playsinline>
+            <source src="{{ url_for('static', filename='video/input.mp4') }}" type="video/mp4">
+        </video>
+        <div class="preview-overlay">
+            <div class="preview-content">
+                <h1 class="preview-title">Hujjatlaringizni raqamlashtiring, vaqtni tejang</h1>
+                <button id="skipPreviewBtn" class="skip-btn">Davom etish →</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Анимация загрузки -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
@@ -16,87 +29,557 @@
         </div>
     </div>
 
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <div class="logo-container">
-                    <img src="{{ url_for('static', filename='images/favicon.svg') }}" alt="Logo" class="logo">
-                </div>
-                <div class="header-text">
-                    <h1 data-i18n="systemTitle">Система учёта отчётов</h1>
-                    <p class="subtitle" data-i18n="systemSubtitle">Автоматизация Excel отчётов</p>
-                </div>
+    <!-- Боковая панель -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='images/favicon.svg') }}" alt="Logo" class="logo">
             </div>
-            <div class="language-switcher">
-                <button class="lang-btn active" data-lang="ru">RU</button>
-                <button class="lang-btn" data-lang="uz">UZ</button>
+            <h2 class="sidebar-title" data-i18n="systemTitle">Платформа отчетности</h2>
+        </div>
+
+        <nav class="sidebar-nav">
+            <button class="nav-item active" data-tab="reports">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span data-i18n="tabReports">Отчеты платформы</span>
+            </button>
+            <button class="nav-item" data-tab="violations">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span data-i18n="tabViolations">Анализ нарушений</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-info">
+                <p>© 2025 v5.0</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Кнопка открытия боковой панели -->
+    <button id="sidebarToggle" class="sidebar-toggle" title="Открыть/закрыть меню">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+
+    <!-- Основной контент -->
+    <div class="main-wrapper" id="mainWrapper">
+        <header class="top-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <button id="menuToggle" class="menu-toggle-btn" title="Меню">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="page-title" id="pageTitle" data-i18n="tabReports">Отчеты платформы</h1>
+                        <p class="page-subtitle" id="pageSubtitle">Консолидация недельных отчетов</p>
+                    </div>
+                </div>
+                <div class="language-switcher">
+                    <button class="lang-btn active" data-lang="ru">RU</button>
+                    <button class="lang-btn" data-lang="uz">UZ</button>
+                </div>
             </div>
         </header>
 
-        <main>
-            <!-- Форма загрузки -->
-            <section class="upload-section">
-                <h2 data-i18n="uploadWeekly">Загрузка еженедельного отчёта</h2>
-                
-                <form id="uploadForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label data-i18n="month">Месяц:</label>
-                            <select id="month" required>
-                                <option value="" data-i18n="selectMonth">Выберите</option>
-                                <option value="1" data-i18n="january">Январь</option>
-                                <option value="2" data-i18n="february">Февраль</option>
-                                <option value="3" data-i18n="march">Март</option>
-                                <option value="4" data-i18n="april">Апрель</option>
-                                <option value="5" data-i18n="may">Май</option>
-                                <option value="6" data-i18n="june">Июнь</option>
-                                <option value="7" data-i18n="july">Июль</option>
-                                <option value="8" data-i18n="august">Август</option>
-                                <option value="9" data-i18n="september">Сентябрь</option>
-                                <option value="10" data-i18n="october">Октябрь</option>
-                                <option value="11" data-i18n="november">Ноябрь</option>
-                                <option value="12" data-i18n="december">Декабрь</option>
-                            </select>
+        <main class="main-content">
+            <!-- ========== ВКЛАДКА: ОТЧЕТЫ ПЛАТФОРМЫ ========== -->
+            <div id="tab-reports" class="tab-content active">
+                <!-- Форма загрузки -->
+                <section class="upload-section">
+                    <h2 data-i18n="uploadWeekly">Загрузка недельного отчёта</h2>
+                    
+                    <form id="uploadForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label data-i18n="month">Месяц:</label>
+                                <select id="month" required>
+                                    <option value="" data-i18n="selectMonth">Выберите</option>
+                                    <option value="1" data-i18n="january">Январь</option>
+                                    <option value="2" data-i18n="february">Февраль</option>
+                                    <option value="3" data-i18n="march">Март</option>
+                                    <option value="4" data-i18n="april">Апрель</option>
+                                    <option value="5" data-i18n="may">Май</option>
+                                    <option value="6" data-i18n="june">Июнь</option>
+                                    <option value="7" data-i18n="july">Июль</option>
+                                    <option value="8" data-i18n="august">Август</option>
+                                    <option value="9" data-i18n="september">Сентябрь</option>
+                                    <option value="10" data-i18n="october">Октябрь</option>
+                                    <option value="11" data-i18n="november">Ноябрь</option>
+                                    <option value="12" data-i18n="december">Декабрь</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label data-i18n="year">Год:</label>
+                                <input type="number" id="year" min="2020" max="2100" required>
+                            </div>
                         </div>
 
                         <div class="form-group">
-                            <label data-i18n="year">Год:</label>
-                            <input type="number" id="year" min="2020" max="2100" required>
+                            <label data-i18n="file">Файл:</label>
+                            <input type="file" id="fileInput" accept=".xlsx,.xls" required>
+                            <small data-i18n="supportedFormats">Поддерживаются форматы: .xlsx, .xls</small>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="btn btn-primary">
+                            <span id="btnText" data-i18n="upload">Загрузить</span>
+                            <span id="btnLoader" class="loader" style="display: none;"></span>
+                        </button>
+                    </form>
+
+                    <div id="message" class="message"></div>
+                </section>
+
+                <!-- Список сводных отчётов -->
+                <section class="reports-section">
+                    <div class="section-header">
+                        <h2 data-i18n="monthlyReports">Сводные отчёты</h2>
+                        <button id="refreshBtn" class="btn btn-secondary" data-i18n="refresh">Обновить</button>
+                    </div>
+                    
+                    <div id="reportsContainer">
+                        <div class="loading" data-i18n="loading">Загрузка...</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ========== ВКЛАДКА: АНАЛИЗ НАРУШЕНИЙ ========== -->
+            <div id="tab-violations" class="tab-content">
+                <!-- Форма загрузки нарушений -->
+                <section class="upload-section collapsible-section">
+                    <div class="section-title-bar" onclick="toggleSection(this)">
+                        <div class="section-title-content">
+                            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <div>
+                                <h2 data-i18n="uploadViolations">Загрузка файла с нарушениями</h2>
+                                <p class="section-hint" data-i18n="violationsDescription">
+                                    Загрузите Excel файл с данными о нарушениях. Система автоматически подсчитает количество каждого типа нарушения из столбца "qoidabuzarlik nomi".
+                                </p>
+                            </div>
+                        </div>
+                        <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                    
+                    <form id="uploadViolationsForm">
+                        <div class="form-group">
+                            <label data-i18n="reportName">Название отчета:</label>
+                            <input type="text" id="reportName" placeholder="Отчет по нарушениям" />
+                            <small data-i18n="reportNameHint">Необязательно. Если не указано, будет создано автоматически</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-i18n="file">Файл:</label>
+                            <input type="file" id="violationsFileInput" accept=".xlsx,.xls" required>
+                            <small data-i18n="supportedFormats">Поддерживаются форматы: .xlsx, .xls</small>
+                        </div>
+
+                        <button type="submit" id="submitViolationsBtn" class="btn btn-primary">
+                            <span id="btnViolationsText" data-i18n="analyze">Анализировать</span>
+                            <span id="btnViolationsLoader" class="loader" style="display: none;"></span>
+                        </button>
+                    </form>
+
+                    <div id="violationsMessage" class="message"></div>
+                    </div>
+                </section>
+
+                <!-- Результаты анализа -->
+                <section id="violationsResultSection" class="results-section collapsible-section" style="display: none;">
+                    <div class="section-title-bar" onclick="toggleSection(this)">
+                        <div class="section-title-content">
+                            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                            </svg>
+                            <div>
+                                <h2 data-i18n="analysisResults">Результаты анализа</h2>
+                                <p class="section-hint">Статистика и подробный отчет по нарушениям</p>
+                            </div>
+                        </div>
+                        <div class="section-actions">
+                            <button id="downloadViolationsTextBtn" class="btn btn-success btn-small" onclick="event.stopPropagation()">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
+                                </svg>
+                                <span data-i18n="downloadText">TXT</span>
+                            </button>
+                            <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                    
+                    <!-- Статистика -->
+                    <div class="stats-grid">
+                        <div class="stat-card stat-primary">
+                            <div class="stat-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label" data-i18n="totalViolations">Всего нарушений</div>
+                                <div class="stat-value" id="totalViolations">0</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-secondary">
+                            <div class="stat-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label" data-i18n="uniqueTypes">Типов нарушений</div>
+                                <div class="stat-value" id="uniqueTypes">0</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-accent">
+                            <div class="stat-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label" data-i18n="mostCommon">Самое частое нарушение</div>
+                                <div class="stat-value stat-value-text" id="mostCommon" title="">-</div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label data-i18n="file">Файл:</label>
-                        <input type="file" id="fileInput" accept=".xlsx,.xls" required>
-                        <small data-i18n="supportedFormats">Поддерживаются форматы: .xlsx, .xls</small>
+                    <!-- Текстовый вывод -->
+                    <div class="document-container">
+                        <div class="document-header">
+                            <div class="document-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 data-i18n="textFormat">Текстовый отчет</h3>
+                                <p class="document-subtitle">Форматированный вывод для печати или экспорта</p>
+                            </div>
+                        </div>
+                        <pre id="textOutput" class="text-output"></pre>
+                    </div>
+                    </div>
+                </section>
+
+                <!-- Список сохраненных отчетов по нарушениям -->
+                <section class="reports-section collapsible-section">
+                    <div class="section-title-bar" onclick="toggleSection(this)">
+                        <div class="section-title-content">
+                            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                            <div>
+                                <h2 data-i18n="savedViolationsReports">Сохранённые отчёты</h2>
+                                <p class="section-hint">История анализа нарушений</p>
+                            </div>
+                        </div>
+                        <div class="section-actions">
+                            <button id="refreshViolationsBtn" class="btn btn-secondary btn-small" onclick="event.stopPropagation()" data-i18n="refresh">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                            </button>
+                            <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                        <div id="violationsReportsContainer">
+                            <div class="loading" data-i18n="loading">Загрузка...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Сравнение файлов -->
+                <section class="upload-section collapsible-section">
+                    <div class="section-title-bar" onclick="toggleSection(this)">
+                        <div class="section-title-content">
+                            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
+                            </svg>
+                            <div>
+                                <h2 data-i18n="compareFiles">Сравнение файлов</h2>
+                                <p class="section-hint" data-i18n="compareDescription">
+                                    Загрузите два файла (Excel или текстовые) для сравнения. Система найдет записи, присутствующие в обоих файлах и уникальные для каждого.
+                                </p>
+                            </div>
+                        </div>
+                        <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                    
+                    <form id="compareFilesForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label data-i18n="file1Name">Название источника 1:</label>
+                                <input type="text" id="file1Name" placeholder="Pochta" value="Pochta" />
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="file2Name">Название источника 2:</label>
+                                <input type="text" id="file2Name" placeholder="Telecom" value="Telecom" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label data-i18n="file1">Файл 1:</label>
+                                <input type="file" id="compareFile1" accept=".xlsx,.xls,.txt" required>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="file2">Файл 2:</label>
+                                <input type="file" id="compareFile2" accept=".xlsx,.xls,.txt" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-i18n="monthName">Название месяца (необязательно):</label>
+                            <input type="text" id="monthNameCompare" placeholder="Sentyabr" />
+                        </div>
+
+                        <button type="submit" id="compareBtn" class="btn btn-primary">
+                            <span id="compareBtnText" data-i18n="compare">Сравнить</span>
+                            <span id="compareBtnLoader" class="loader" style="display: none;"></span>
+                        </button>
+                    </form>
+
+                    <div id="compareMessage" class="message"></div>
+                    </div>
+                </section>
+
+                <!-- Объединение файлов -->
+                <section class="upload-section collapsible-section">
+                    <div class="section-title-bar" onclick="toggleSection(this)">
+                        <div class="section-title-content">
+                            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <div>
+                                <h2 data-i18n="mergeFiles">Объединение файлов</h2>
+                                <p class="section-hint" data-i18n="mergeDescription">
+                                    Загрузите несколько файлов (Excel или текстовые) и укажите названия столбцов. Система соберет все данные из этих столбцов в один файл.
+                                </p>
+                            </div>
+                        </div>
+                        <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                    
+                    <form id="mergeFilesForm">
+                        <div class="form-group">
+                            <label data-i18n="columnNames">Названия столбцов (через запятую):</label>
+                            <input type="text" id="columnNames" placeholder="doc_num, id, number" value="doc_num" required />
+                            <small data-i18n="columnNamesHint">Укажите названия столбцов, которые нужно извлечь из файлов</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label data-i18n="selectFiles">Выберите файлы (минимум 2):</label>
+                            <input type="file" id="mergeFiles" accept=".xlsx,.xls,.txt,.csv" multiple required>
+                            <small data-i18n="mergeFilesHint">Можно выбрать несколько файлов одновременно</small>
+                        </div>
+
+                        <div id="selectedFilesList" class="selected-files-list"></div>
+
+                        <button type="submit" id="mergeBtn" class="btn btn-primary">
+                            <span id="mergeBtnText" data-i18n="merge">Объединить</span>
+                            <span id="mergeBtnLoader" class="loader" style="display: none;"></span>
+                        </button>
+                    </form>
+
+                    <div id="mergeMessage" class="message"></div>
+                    </div>
+                </section>
+
+                <!-- Результаты объединения -->
+                <section id="mergeResultSection" class="results-section collapsible-section" style="display: none;">
+                    <div class="section-title-bar" onclick="toggleSection(this)">
+                        <div class="section-title-content">
+                            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            <div>
+                                <h2 data-i18n="mergeResults">Результаты объединения</h2>
+                                <p class="section-hint">Объединенные данные из всех файлов</p>
+                            </div>
+                        </div>
+                        <div class="section-actions">
+                            <button id="downloadMergedTextBtn" class="btn btn-success btn-small" onclick="event.stopPropagation()">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
+                                </svg>
+                                <span>TXT</span>
+                            </button>
+                            <button id="downloadMergedExcelBtn" class="btn btn-primary btn-small" onclick="event.stopPropagation()">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
+                                </svg>
+                                <span>Excel</span>
+                            </button>
+                            <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                    
+                    <!-- Статистика по файлам -->
+                    <div id="mergeStatsContainer"></div>
+
+                    <!-- Текстовый вывод объединенных данных -->
+                    <div class="document-container">
+                        <div class="document-header">
+                            <div class="document-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 data-i18n="mergedData">Объединенные данные</h3>
+                                <p class="document-subtitle">Все извлеченные записи</p>
+                            </div>
+                        </div>
+                        <pre id="mergeOutput" class="text-output"></pre>
+                    </div>
+                    </div>
+                </section>
+
+                <!-- Результаты сравнения -->
+                <section id="comparisonResultSection" class="results-section collapsible-section" style="display: none;">
+                    <div class="section-title-bar" onclick="toggleSection(this)">
+                        <div class="section-title-content">
+                            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            <div>
+                                <h2 data-i18n="comparisonResults">Результаты сравнения</h2>
+                                <p class="section-hint">Статистика различий между файлами</p>
+                            </div>
+                        </div>
+                        <div class="section-actions">
+                            <button id="downloadDiff1Btn" class="btn btn-success btn-small" onclick="event.stopPropagation()" title="Скачать записи только из первого файла">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
+                                </svg>
+                                <span>File 1</span>
+                            </button>
+                            <button id="downloadDiff2Btn" class="btn btn-primary btn-small" onclick="event.stopPropagation()" title="Скачать записи только из второго файла">
+                                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/>
+                                </svg>
+                                <span>File 2</span>
+                            </button>
+                            <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                    
+                    <!-- Статистика сравнения -->
+                    <div class="stats-grid">
+                        <div class="stat-card stat-primary">
+                            <div class="stat-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label"><span id="file1NameLabel">Файл 1</span></div>
+                                <div class="stat-value" id="file1Total">0</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-secondary">
+                            <div class="stat-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label"><span id="file2NameLabel">Файл 2</span></div>
+                                <div class="stat-value" id="file2Total">0</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-accent">
+                            <div class="stat-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-label" data-i18n="inBoth">В обоих файлах</div>
+                                <div class="stat-value" id="inBoth">0</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <button type="submit" id="submitBtn" class="btn btn-primary">
-                        <span id="btnText" data-i18n="upload">Загрузить</span>
-                        <span id="btnLoader" class="loader" style="display: none;"></span>
-                    </button>
-                </form>
-
-                <div id="message" class="message"></div>
-            </section>
-
-            <!-- Список месячных отчётов -->
-            <section class="reports-section">
-                <div class="section-header">
-                    <h2 data-i18n="monthlyReports">Месячные отчёты</h2>
-                    <button id="refreshBtn" class="btn btn-secondary" data-i18n="refresh">Обновить</button>
-                </div>
-                
-                <div id="reportsContainer">
-                    <div class="loading" data-i18n="loading">Загрузка...</div>
-                </div>
-            </section>
+                    <!-- Текстовый вывод сравнения -->
+                    <div class="document-container">
+                        <div class="document-header">
+                            <div class="document-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 data-i18n="comparisonReport">Отчет сравнения</h3>
+                                <p class="document-subtitle">Детальная статистика различий</p>
+                            </div>
+                        </div>
+                        <pre id="comparisonOutput" class="text-output"></pre>
+                    </div>
+                    </div>
+                </section>
+            </div>
         </main>
-
-        <footer>
-            <p>© 2025 <span data-i18n="footerText">Система учёта отчётов</span></p>
-        </footer>
     </div>
+
+    <!-- Глобальная функция для сворачивания/разворачивания секций -->
+    <script>
+        function toggleSection(element) {
+            const section = element.closest('.collapsible-section');
+            const content = section.querySelector('.section-content');
+            const icon = element.querySelector('.collapse-icon');
+            
+            section.classList.toggle('collapsed');
+            
+            if (section.classList.contains('collapsed')) {
+                content.style.maxHeight = '0';
+                content.style.opacity = '0';
+                content.style.padding = '0';
+            } else {
+                content.style.maxHeight = content.scrollHeight + 'px';
+                content.style.opacity = '1';
+                content.style.padding = '';
+                
+                // Устанавливаем auto после анимации
+                setTimeout(() => {
+                    if (!section.classList.contains('collapsed')) {
+                        content.style.maxHeight = 'none';
+                    }
+                }, 300);
+            }
+        }
+    </script>
 
     <!-- Модальное окно подтверждения удаления -->
     <div id="confirmModal" class="modal">
@@ -118,5 +601,91 @@
 
     <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    
+    <!-- Скрипт для видео превью -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const videoPreview = document.getElementById('videoPreview');
+            const skipBtn = document.getElementById('skipPreviewBtn');
+            const previewVideo = document.getElementById('previewVideo');
+            
+            // Проверяем, показывали ли уже превью
+            const previewShown = sessionStorage.getItem('previewShown');
+            
+            if (previewShown) {
+                videoPreview.classList.add('hidden');
+                setTimeout(() => {
+                    videoPreview.style.display = 'none';
+                }, 800);
+            } else {
+                // Обработчик кнопки "Пропустить"
+                skipBtn.addEventListener('click', function() {
+                    sessionStorage.setItem('previewShown', 'true');
+                    videoPreview.classList.add('hidden');
+                    setTimeout(() => {
+                        videoPreview.style.display = 'none';
+                    }, 800);
+                });
+                
+                // Автоматически скрыть превью через 8 секунд
+                setTimeout(() => {
+                    if (!sessionStorage.getItem('previewShown')) {
+                        sessionStorage.setItem('previewShown', 'true');
+                        videoPreview.classList.add('hidden');
+                        setTimeout(() => {
+                            videoPreview.style.display = 'none';
+                        }, 800);
+                    }
+                }, 8000);
+            }
+            
+            // Обработка ошибки загрузки видео
+            previewVideo.addEventListener('error', function() {
+                console.warn('Video failed to load, skipping preview');
+                videoPreview.classList.add('hidden');
+                setTimeout(() => {
+                    videoPreview.style.display = 'none';
+                }, 100);
+            });
+        });
+        
+        // ========== УПРАВЛЕНИЕ БОКОВОЙ ПАНЕЛЬЮ ==========
+        const sidebar = document.getElementById('sidebar');
+        const mainWrapper = document.getElementById('mainWrapper');
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        
+        // Проверяем сохраненное состояние
+        const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (sidebarCollapsed) {
+            sidebar.classList.add('collapsed');
+            mainWrapper.classList.add('sidebar-collapsed');
+        }
+        
+        // Функция переключения панели
+        function toggleSidebar() {
+            sidebar.classList.toggle('collapsed');
+            mainWrapper.classList.toggle('sidebar-collapsed');
+            
+            // Сохраняем состояние
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+        
+        // Обработчики
+        menuToggle.addEventListener('click', toggleSidebar);
+        sidebarToggle.addEventListener('click', toggleSidebar);
+        
+        // Закрытие при клике вне панели на мобильных
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(e.target) && 
+                    !menuToggle.contains(e.target) &&
+                    !sidebar.classList.contains('collapsed')) {
+                    toggleSidebar();
+                }
+            }
+        });
+    </script>
 </body>
 </html>

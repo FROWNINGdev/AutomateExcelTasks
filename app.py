@@ -4,11 +4,14 @@ from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from excel_processor import ExcelProcessor
+from violations_processor import ViolationsProcessor
+from comparison_processor import ComparisonProcessor
+from merge_processor import MergeProcessor
 from database import Database
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['TEMPLATE_FILE'] = r'static\file\Шаблон.xlsx'
+app.config['TEMPLATE_FILE'] = os.path.join('static', 'file', 'Шаблон.xlsx')
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 app.config['ALLOWED_EXTENSIONS'] = {'xlsx', 'xls'}
 
@@ -181,5 +184,354 @@ def delete_report(month, year):
     except Exception as e:
         return jsonify({'error': f'Ошибка удаления файла: {str(e)}'}), 500
 
+# ========== ENDPOINTS ДЛЯ РАБОТЫ С НАРУШЕНИЯМИ ==========
+
+@app.route('/violations/upload', methods=['POST'])
+def upload_violations():
+    """Загрузка и обработка файла с нарушениями"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'Файл не выбран'}), 400
+        
+        file = request.files['file']
+        report_name = request.form.get('report_name', '').strip()
+        
+        if file.filename == '':
+            return jsonify({'error': 'Файл не выбран'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Разрешены только файлы Excel (.xlsx, .xls)'}), 400
+        
+        if not report_name:
+            # Генерируем имя отчета по дате
+            report_name = f"Отчет {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        
+        # Сохраняем файл временно
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], f'violations_{timestamp}_{filename}')
+        file.save(file_path)
+        
+        # Обрабатываем файл
+        processor = ViolationsProcessor()
+        violations_data = processor.process_violations_file(file_path)
+        
+        # Сохраняем в БД
+        report_id = db.save_violations_report(
+            report_name=report_name,
+            original_filename=filename,
+            file_path=file_path,
+            violations_data=violations_data,
+            text_output=violations_data['text_output']
+        )
+        
+        # Получаем статистику
+        stats = processor.get_statistics(violations_data['violations'])
+        
+        # Удаляем временный файл
+        os.remove(file_path)
+        
+        return jsonify({
+            'success': True,
+            'message_ru': f'Файл успешно обработан. Найдено {violations_data["total"]} нарушений.',
+            'message_uz': f'Fayl muvaffaqiyatli qayta ishlandi. {violations_data["total"]} ta qoidabuzarlik topildi.',
+            'report_id': report_id,
+            'report_name': report_name,
+            'stats': stats,
+            'violations': violations_data['violations'][:10],  # Первые 10 для превью
+            'text_output': violations_data['text_output']
+        })
+    
+    except Exception as e:
+        # Удаляем временный файл при ошибке
+        if 'file_path' in locals() and os.path.exists(file_path):
+            os.remove(file_path)
+        return jsonify({'error': f'Ошибка обработки файла: {str(e)}'}), 500
+
+@app.route('/violations/reports')
+def get_violations_reports():
+    """Получить список всех отчетов по нарушениям"""
+    try:
+        reports = db.get_all_violations_reports()
+        return jsonify({'reports': reports})
+    except Exception as e:
+        return jsonify({'error': f'Ошибка получения списка отчетов: {str(e)}'}), 500
+
+@app.route('/violations/report/<int:report_id>')
+def get_violations_report_details(report_id):
+    """Получить детали отчета по нарушениям"""
+    try:
+        report = db.get_violations_report(report_id)
+        if not report:
+            return jsonify({'error': 'Отчет не найден'}), 404
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({'error': f'Ошибка получения отчета: {str(e)}'}), 500
+
+@app.route('/violations/download/<int:report_id>')
+def download_violations_report(report_id):
+    """Скачать отчет по нарушениям в текстовом формате"""
+    try:
+        # Получаем язык из параметра запроса
+        language = request.args.get('lang', 'ru')
+        
+        report = db.get_violations_report(report_id)
+        if not report:
+            return jsonify({'error': 'Отчет не найден'}), 404
+        
+        # Создаем текстовый файл
+        processor = ViolationsProcessor()
+        text_content, filename = processor.export_to_text({
+            'violations': report['violations'],
+            'total': report['total_violations'],
+            'unique_violations': report['unique_types'],
+            'text_output': report['text_output']
+        }, language=language)
+        
+        # Отправляем файл
+        file_stream = io.BytesIO(text_content)
+        file_stream.seek(0)
+        
+        return send_file(
+            file_stream,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='text/plain; charset=utf-8'
+        )
+    except Exception as e:
+        return jsonify({'error': f'Ошибка скачивания отчета: {str(e)}'}), 500
+
+@app.route('/violations/delete/<int:report_id>', methods=['DELETE'])
+def delete_violations_report(report_id):
+    """Удалить отчет по нарушениям"""
+    try:
+        report = db.get_violations_report(report_id)
+        if not report:
+            return jsonify({'error': 'Отчет не найден'}), 404
+        
+        db.delete_violations_report(report_id)
+        
+        return jsonify({'success': True, 'message': 'Отчет успешно удалён'})
+    except Exception as e:
+        return jsonify({'error': f'Ошибка удаления отчета: {str(e)}'}), 500
+
+# ========== СРАВНЕНИЕ ФАЙЛОВ ==========
+
+@app.route('/comparison/compare', methods=['POST'])
+def compare_files():
+    """Сравнение двух файлов"""
+    try:
+        if 'file1' not in request.files or 'file2' not in request.files:
+            return jsonify({'error': 'Необходимо загрузить оба файла'}), 400
+        
+        file1 = request.files['file1']
+        file2 = request.files['file2']
+        file1_name = request.form.get('file1_name', 'Файл 1')
+        file2_name = request.form.get('file2_name', 'Файл 2')
+        month_name = request.form.get('month_name', '')
+        language = request.form.get('language', 'uz')
+        
+        if file1.filename == '' or file2.filename == '':
+            return jsonify({'error': 'Выберите оба файла'}), 400
+        
+        # Сохраняем файлы временно
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        file1_path = os.path.join(app.config['UPLOAD_FOLDER'], f'compare1_{timestamp}_{secure_filename(file1.filename)}')
+        file2_path = os.path.join(app.config['UPLOAD_FOLDER'], f'compare2_{timestamp}_{secure_filename(file2.filename)}')
+        
+        file1.save(file1_path)
+        file2.save(file2_path)
+        
+        # Сравниваем файлы
+        processor = ComparisonProcessor()
+        result = processor.compare_files(
+            file1_path, 
+            file2_path, 
+            file1_name, 
+            file2_name
+        )
+        
+        # Форматируем вывод на нужном языке
+        result['text_output'] = processor._format_comparison_output(result, language)
+        
+        # Добавляем название месяца
+        if month_name:
+            result['month_name'] = month_name
+        
+        # Удаляем временные файлы
+        os.remove(file1_path)
+        os.remove(file2_path)
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+    
+    except Exception as e:
+        # Удаляем временные файлы при ошибке
+        if 'file1_path' in locals() and os.path.exists(file1_path):
+            os.remove(file1_path)
+        if 'file2_path' in locals() and os.path.exists(file2_path):
+            os.remove(file2_path)
+        return jsonify({'error': f'Ошибка сравнения: {str(e)}'}), 500
+
+@app.route('/comparison/download-differences', methods=['POST'])
+def download_comparison_differences():
+    """Скачать 2 файла с различиями (как в compare_month.py --export)"""
+    try:
+        comparison_data = request.json.get('comparison_data')
+        file_type = request.json.get('file_type', 'file1')  # file1 или file2
+        
+        if not comparison_data:
+            return jsonify({'error': 'Нет данных для экспорта'}), 400
+        
+        processor = ComparisonProcessor()
+        file1_content, file1_name, file2_content, file2_name = processor.export_differences(comparison_data)
+        
+        # Отправляем нужный файл
+        if file_type == 'file1':
+            file_stream = io.BytesIO(file1_content)
+            filename = file1_name
+        else:
+            file_stream = io.BytesIO(file2_content)
+            filename = file2_name
+        
+        file_stream.seek(0)
+        
+        return send_file(
+            file_stream,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='text/plain; charset=utf-8'
+        )
+    except Exception as e:
+        return jsonify({'error': f'Ошибка экспорта: {str(e)}'}), 500
+
+# ========== ОБЪЕДИНЕНИЕ ФАЙЛОВ ==========
+
+@app.route('/merge/process', methods=['POST'])
+def merge_files_endpoint():
+    """Объединение нескольких файлов по указанным столбцам"""
+    try:
+        # Получаем файлы
+        files = request.files.getlist('files[]')
+        if not files or len(files) < 2:
+            return jsonify({'error': 'Необходимо загрузить минимум 2 файла'}), 400
+        
+        # Получаем названия столбцов
+        column_names_str = request.form.get('column_names', 'doc_num')
+        column_names = [col.strip() for col in column_names_str.split(',') if col.strip()]
+        
+        if not column_names:
+            return jsonify({'error': 'Укажите хотя бы одно название столбца'}), 400
+        
+        language = request.form.get('language', 'ru')
+        
+        # Сохраняем файлы временно
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        files_data = []
+        temp_files = []
+        
+        for i, file in enumerate(files):
+            if file.filename == '':
+                continue
+            
+            file_path = os.path.join(
+                app.config['UPLOAD_FOLDER'], 
+                f'merge_{timestamp}_{i}_{secure_filename(file.filename)}'
+            )
+            file.save(file_path)
+            temp_files.append(file_path)
+            
+            files_data.append({
+                'file': file_path,
+                'name': file.filename
+            })
+        
+        if len(files_data) < 2:
+            # Удаляем временные файлы
+            for temp_file in temp_files:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            return jsonify({'error': 'Необходимо загрузить минимум 2 корректных файла'}), 400
+        
+        # Объединяем файлы
+        processor = MergeProcessor()
+        result = processor.merge_files(files_data, column_names)
+        
+        # Форматируем вывод на нужном языке
+        # Для веб-интерфейса - ограничиваем предпросмотр до 1000 записей
+        result['text_output'] = processor._format_merged_output(result, language, limit_preview=1000)
+        # Для скачивания - сохраняем полный вывод
+        result['text_output_full'] = processor._format_merged_output(result, language, limit_preview=0)
+        
+        # Удаляем временные файлы
+        for temp_file in temp_files:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        })
+    
+    except Exception as e:
+        # Удаляем временные файлы при ошибке
+        if 'temp_files' in locals():
+            for temp_file in temp_files:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+        return jsonify({'error': f'Ошибка объединения: {str(e)}'}), 500
+
+@app.route('/merge/download-txt', methods=['POST'])
+def download_merged_txt():
+    """Скачать объединенные данные как TXT"""
+    try:
+        merged_data = request.json.get('merged_data')
+        language = request.json.get('language', 'ru')
+        
+        if not merged_data:
+            return jsonify({'error': 'Нет данных для экспорта'}), 400
+        
+        processor = MergeProcessor()
+        text_content, filename = processor.export_merged_data(merged_data, language=language)
+        
+        file_stream = io.BytesIO(text_content)
+        file_stream.seek(0)
+        
+        return send_file(
+            file_stream,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='text/plain; charset=utf-8'
+        )
+    except Exception as e:
+        return jsonify({'error': f'Ошибка экспорта: {str(e)}'}), 500
+
+@app.route('/merge/download-excel', methods=['POST'])
+def download_merged_excel():
+    """Скачать объединенные данные как Excel"""
+    try:
+        merged_data = request.json.get('merged_data')
+        
+        if not merged_data:
+            return jsonify({'error': 'Нет данных для экспорта'}), 400
+        
+        processor = MergeProcessor()
+        excel_content, filename = processor.export_to_excel(merged_data)
+        
+        file_stream = io.BytesIO(excel_content)
+        file_stream.seek(0)
+        
+        return send_file(
+            file_stream,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        return jsonify({'error': f'Ошибка экспорта: {str(e)}'}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5050))
+    app.run(debug=True, host='0.0.0.0', port=port)

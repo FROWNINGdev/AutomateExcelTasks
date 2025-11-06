@@ -46,11 +46,14 @@ ENV PATH="/opt/venv/bin:$PATH" \
 USER appuser
 
 # Открытие порта
-EXPOSE 5000
+EXPOSE 5050
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5050')"
+
+# Копирование Docker-версии процессора перед запуском
+RUN cp excel_processor_docker.py excel_processor.py
 
 # Запуск приложения
 CMD ["python", "app.py"]

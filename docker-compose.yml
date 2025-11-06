@@ -5,7 +5,7 @@ services:
     build: .
     container_name: excel-automation
     ports:
-      - "5000:5000"
+      - "5050:5050"
     volumes:
       # Persistent database
       - ./data:/app/data
@@ -14,9 +14,10 @@ services:
     environment:
       - FLASK_ENV=production
       - DATABASE_PATH=/app/data/uploads.db
+      - PORT=5050
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5050')"]
       interval: 30s
       timeout: 10s
       retries: 3
