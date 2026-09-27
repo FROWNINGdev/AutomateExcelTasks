@@ -1,7 +1,7 @@
 # Docker версия без xlwings (работает на Linux)
 Flask==3.0.3
 openpyxl==3.1.5
-werkzeug==3.0.3
+werkzeug==3.1.8
 gunicorn==21.2.0
 pandas==2.2.0
 
